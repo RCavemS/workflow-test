@@ -1,0 +1,30 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Node tests
+        if: hashFiles('package.json') != ''
+        run: |
+          npm ci || npm install
+          npm test --if-present
+
+      - name: Python tests
+        if: hashFiles('requirements.txt', 'pyproject.toml') != ''
+        run: |
+          pip install -r requirements.txt 2>/dev/null || pip install -e . 2>/dev/null || true
+          pip install pytest
+          pytest || [ $? -eq 5 ]   # exit code 5 = no tests yet, which is OK
+
+      - name: Nothing to test yet
+        if: hashFiles('package.json', 'requirements.txt', 'pyproject.toml') == ''
+        run: echo "No package.json or Python project yet. CI passes."
